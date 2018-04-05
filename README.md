@@ -1,56 +1,60 @@
 # **Finding Lane Lines on the Road** 
-[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
-<img src="examples/laneLines_thirdPass.jpg" width="480" alt="Combined Image" />
+This is a writeup for project 1 finding and annotating lane lines on the road
 
-Overview
 ---
 
-When we drive, we use our eyes to decide where to go.  The lines on the road that show us where the lanes are act as our constant reference for where to steer the vehicle.  Naturally, one of the first things we would like to do in developing a self-driving car is to automatically detect lane lines using an algorithm.
+**Finding Lane Lines on the Road**
 
-In this project you will detect lane lines in images using Python and OpenCV.  OpenCV means "Open-Source Computer Vision", which is a package that has many useful tools for analyzing images.  
+The goals / steps of this project are the following:
+* Making a pipeline that finds lane lines on the road
+* Reflect on your work in a written report
 
-To complete the project, two files will be submitted: a file containing project code and a file containing a brief write up explaining your solution. We have included template files to be used both for the [code](https://github.com/udacity/CarND-LaneLines-P1/blob/master/P1.ipynb) and the [writeup](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md).The code file is called P1.ipynb and the writeup template is writeup_template.md 
+[//]: # (Image References)
 
-To meet specifications in the project, take a look at the requirements in the [project rubric](https://review.udacity.com/#!/rubrics/322/view)
-
-
-Creating a Great Writeup
----
-For this project, a great writeup should provide a detailed response to the "Reflection" section of the [project rubric](https://review.udacity.com/#!/rubrics/322/view). There are three parts to the reflection:
-
-1. Describe the pipeline
-
-2. Identify any shortcomings
-
-3. Suggest possible improvements
-
-We encourage using images in your writeup to demonstrate how your pipeline works.  
-
-All that said, please be concise!  We're not looking for you to write a book here: just a brief description.
-
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup. Here is a link to a [writeup template file](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md). 
+[input_image]: ./test_images/solidWhiteRight.jpg "Example input image"
+[image1]: ./pipeline_stages/grayscale.jpg "Grayscale"
+[image2]: ./pipeline_stages/blur_grayscale.jpg "Blurred_Grayscale"
+[image3]: ./pipeline_stages/edges.jpg "Canny edges"
+[image4]: ./pipeline_stages/masked_edges.jpg "Masked edge image"
+[annotated_image]: ./annotated_test_images/solidWhiteRight.jpg "annotated output image"
 
 
-The Project
 ---
 
-## If you have already installed the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) you should be good to go!   If not, you should install the starter kit to get started on this project. ##
+The image pipeline was developed and applied to images as well as videos.
 
-**Step 1:** Set up the [CarND Term1 Starter Kit](https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/83ec35ee-1e02-48a5-bdb7-d244bd47c2dc/lessons/8c82408b-a217-4d09-b81d-1bda4c6380ef/concepts/4f1870e0-3849-43e4-b670-12e6f2d4b7a7) if you haven't already.
+### Reflection
 
-**Step 2:** Open the code in a Jupyter Notebook
+### 1. Description of the image pipeline.
 
-You will complete the project code in a Jupyter notebook.  If you are unfamiliar with Jupyter Notebooks, check out <A HREF="https://www.packtpub.com/books/content/basics-jupyter-notebook-and-python" target="_blank">Cyrille Rossant's Basics of Jupyter Notebook and Python</A> to get started.
+My pipeline consisted of following steps. The output of each stage is also shown below for one example input image 
 
-Jupyter is an Ipython notebook where you can run blocks of code and see results interactively.  All the code for this project is contained in a Jupyter notebook. To start Jupyter in your browser, use terminal to navigate to your project directory and then run the following command at the terminal prompt (be sure you've activated your Python 3 carnd-term1 environment as described in the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) installation instructions!):
+Example input image :
+![alt text][input_image]
 
-`> jupyter notebook`
+1. Generate a grayscale version of the input image, using helper function
+ ... ![alt text][image1]
+2. Then a Gaussian blur was applied with kernel size 5 to eliminate some noise
+ ... ![alt text][image2]
+3. Then Canny edge detection was applied with high threshold of 170, and low threshold of 60
+ ... ![alt text][image3]
+4. Then the resulting image is masked using a quadrilateral with vertices (0, 540), (450, 320), (500, 320) and (900, 540)
+ ... ![alt text][image4]
+5. Then hough transform is applied using the helper function. The parameters are tuned to get a good output as seen visually.
+6. The output of hough transform is an image with lines or line segments drawn, which was then superimposed on the input image and saved as output. 
+ ... ![alt text][annotated_image]
 
-A browser window will appear showing the contents of the current directory.  Click on the file called "P1.ipynb".  Another browser window will appear displaying the notebook.  Follow the instructions in the notebook to complete the project.  
+Initially, I used the draw_lines() method provided to draw the detected segmented lines. Then I replaced the draw_lines() function by draw_full_lines() with following changes: 
+* draw_full_lines() function first find slopes of the lines. Lines with +ve slopes were classfied as belonging to right lane line while lines with -ve slopes are classfied as left lane lines. I filtered out those lines for which either slope was undefined (x1 == x2) or slope was < 20 degrees or more than 160 degrees. This is to prevent picking up some small lines which may have a +ve or -ve slope and get identified as part of right or left lane lines 
+* then draw_full_lines() uses another function find_full_lines() which takes all left line segments and fit them into a linear model using np.polyfit and returns a line stretching from the bottom of the image to top of the masked region. Same was done for right line segments.
+* Finally the extraploted left and right line were drawn on a blank image. 
 
-**Step 3:** Complete the project and submit both the Ipython notebook and the project writeup
+### 2. Potential shortcomings of the current pipeline
 
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+I find the current pipeline is not very robust in presence of a) curved lines, b) small line segments, which may be part of left lines, but with negative slope and get mis-classified as part of line, modifying the final right line annotation significantly. Because of Canny and Hough transform parameter tuning, some thin lane line segments would not be picked up. 
+
+### 3. Suggest possible improvements to your pipeline
+
+In order to improve the pipeline, we need to tune Canny such that small line segments are picked up. But then, after Hough transform, the lines must be filtered out based on their slope. It may be possible to first classify the line segments as right and left, and then do a k-means clustering with k=1 for each bucket based on the slope of the line. The outliers should be filtered out as noise.
 
